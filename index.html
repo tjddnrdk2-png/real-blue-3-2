@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>호우대응 교차검증 보드</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&family=IBM+Plex+Sans+KR:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root {
+    --bg: #eef1f5;
+    --surface: #ffffff;
+    --ink: #16202b;
+    --ink-soft: #5a6773;
+    --accent: #1d5fae;
+    --warn: #b23a2e;
+    --line: #d7dde3;
+    --f-display: 'Noto Serif KR', serif;
+    --f-body: 'IBM Plex Sans KR', 'Noto Sans KR', sans-serif;
+    --f-mono: 'IBM Plex Mono', monospace;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #10151b;
+      --surface: #182028;
+      --ink: #e7ecf1;
+      --ink-soft: #93a1ac;
+      --accent: #5b9bf0;
+      --warn: #e2766a;
+      --line: #2a3440;
+      color-scheme: dark;
+    }
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--f-body);
+    margin: 0;
+    padding: 32px 16px 64px;
+  }
+  .wrap { max-width: 920px; margin: 0 auto; }
+
+  header.page { margin-bottom: 28px; }
+  .eyebrow {
+    font-family: var(--f-mono);
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 8px;
+  }
+  h1 {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: clamp(24px, 4vw, 32px);
+    line-height: 1.25;
+    margin: 0 0 10px;
+    text-wrap: balance;
+  }
+  .lede {
+    color: var(--ink-soft);
+    font-size: 14.5px;
+    line-height: 1.6;
+    max-width: 62ch;
+    margin: 0;
+  }
+
+  section { margin-bottom: 36px; }
+  h2 {
+    font-family: var(--f-display);
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0 0 14px;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+  }
+  h2 .num {
+    font-family: var(--f-mono);
+    font-size: 12px;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    border-radius: 3px;
+    padding: 1px 6px;
+  }
+
+  .search-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+  }
+  .search-row input[type="text"] {
+    flex: 1 1 220px;
+    min-width: 0;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 14px;
+    color: var(--ink);
+    font-family: var(--f-body);
+  }
+  .search-row input[type="text"]:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+  .chip-row { display: flex; gap: 6px; flex-wrap: wrap; }
+  .chip {
+    font-family: var(--f-mono);
+    font-size: 12.5px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    color: var(--ink-soft);
+    border-radius: 999px;
+    padding: 5px 12px;
+    cursor: pointer;
+  }
+  .chip[aria-pressed="true"] {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+  .result-count {
+    font-family: var(--f-mono);
+    font-size: 12.5px;
+    color: var(--ink-soft);
+    margin: 10px 0 16px;
+  }
+  .result-count b { color: var(--ink); font-weight: 600; }
+
+  .cards { display: grid; gap: 12px; }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--accent);
+    border-radius: 8px;
+    padding: 16px 18px;
+  }
+  .card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 10px;
+    margin-bottom: 6px;
+    flex-wrap: wrap;
+  }
+  .dept {
+    font-family: var(--f-mono);
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .card-title {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: 16px;
+    margin: 2px 0 8px;
+    line-height: 1.4;
+  }
+  .card-summary {
+    font-size: 13.5px;
+    color: var(--ink-soft);
+    line-height: 1.65;
+    margin: 0;
+  }
+  mark {
+    background: color-mix(in srgb, var(--accent) 28%, transparent);
+    color: var(--ink);
+    border-radius: 2px;
+    padding: 0 1px;
+  }
+  .empty {
+    color: var(--ink-soft);
+    font-size: 13.5px;
+    padding: 18px 0;
+  }
+
+  .matrix-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; }
+  table.matrix {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13.5px;
+    min-width: 480px;
+    background: var(--surface);
+  }
+  table.matrix th, table.matrix td {
+    padding: 11px 14px;
+    border-bottom: 1px solid var(--line);
+    text-align: left;
+  }
+  table.matrix th {
+    font-family: var(--f-mono);
+    font-size: 11.5px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    font-weight: 500;
+  }
+  table.matrix tr:last-child td { border-bottom: none; }
+  table.matrix td.fact {
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  table.matrix td.val {
+    font-family: var(--f-mono);
+    font-variant-numeric: tabular-nums;
+  }
+  .flag {
+    display: inline-block;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--warn);
+    margin-right: 7px;
+    vertical-align: middle;
+  }
+  .legend {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--ink-soft);
+    margin-top: 10px;
+  }
+
+  .sheet-box {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 18px;
+  }
+  .sheet-box p {
+    margin: 0 0 12px;
+    font-size: 13.5px;
+    color: var(--ink-soft);
+    line-height: 1.6;
+  }
+  .sheet-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+  button.btn {
+    font-family: var(--f-body);
+    font-size: 13.5px;
+    font-weight: 600;
+    border: 1px solid var(--accent);
+    background: var(--accent);
+    color: #fff;
+    border-radius: 6px;
+    padding: 9px 16px;
+    cursor: pointer;
+  }
+  button.btn.ghost {
+    background: transparent;
+    color: var(--accent);
+  }
+  button.btn:active { transform: translateY(1px); }
+  .copied-msg {
+    font-family: var(--f-mono);
+    font-size: 12px;
+    color: var(--accent);
+    margin-left: 4px;
+  }
+  .sheet-frame-wrap {
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  iframe.sheet-frame {
+    width: 100%;
+    height: 420px;
+    border: 0;
+    display: block;
+  }
+
+  footer.page {
+    margin-top: 48px;
+    padding-top: 18px;
+    border-top: 1px solid var(--line);
+    font-family: var(--f-mono);
+    font-size: 11.5px;
+    color: var(--ink-soft);
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="page">
+    <p class="eyebrow">2026.05.25 호우 대응 · 3개 부처 보도자료 교차검증</p>
+    <h1>같은 사건, 다른 숫자</h1>
+    <p class="lede">행정안전부·기상청·경찰청이 같은 호우 대응을 두고 각자 낸 보도자료 3건입니다. 키워드로 본문을 뒤지고, 아래 매트릭스에서 다섯 가지 핵심 수치가 부처마다 어떻게 갈리는지 확인하세요.</p>
+  </header>
+
+  <section>
+    <h2><span class="num">01</span>보도자료 검색</h2>
+    <div class="search-row">
+      <input type="text" id="search-input" placeholder="키워드 검색 — 예: 1,820명, 중대본, 16:30" autocomplete="off">
+    </div>
+    <div class="chip-row" id="dept-chips"></div>
+    <p class="result-count" id="result-count"></p>
+    <div class="cards" id="card-list"></div>
+  </section>
+
+  <section>
+    <h2><span class="num">02</span>부처별 정합성 매트릭스</h2>
+    <div class="matrix-wrap">
+      <table class="matrix" id="matrix-table"></table>
+    </div>
+    <div class="legend"><span class="flag"></span>값이 일치하지 않는 항목</div>
+  </section>
+
+  <section>
+    <h2><span class="num">03</span>구글 시트</h2>
+    <div class="sheet-box">
+      <p>매트릭스 원본을 구글 시트에서 직접 확인·편집할 수 있습니다.</p>
+      <div class="sheet-actions">
+        <button class="btn" id="copy-tsv">매트릭스 TSV 복사<span class="copied-msg" id="copy-msg" hidden>복사됨</span></button>
+        <a class="btn ghost" href="https://docs.google.com/spreadsheets/d/e/2PACX-1vRJIzK3om7gt-sBf6TF3ozcCevcQu2Z7gFPmkZpmELDhwAUAe6UIgyv_E7c4gTeGn5gi4cReCvVRExx/pubhtml?gid=0&single=true&widget=true&headers=false" target="_blank" rel="noopener" style="text-decoration:none;display:inline-flex;align-items:center;">새 탭에서 열기</a>
+      </div>
+      <div class="sheet-frame-wrap">
+        <iframe class="sheet-frame" src="https://docs.google.com/spreadsheets/d/e/2PACX-1vRJIzK3om7gt-sBf6TF3ozcCevcQu2Z7gFPmkZpmELDhwAUAe6UIgyv_E7c4gTeGn5gi4cReCvVRExx/pubhtml?gid=0&amp;single=true&amp;widget=true&amp;headers=false" referrerpolicy="no-referrer-when-downgrade" title="부처별 정합성 매트릭스 — 구글 시트"></iframe>
+      </div>
+    </div>
+  </section>
+
+  <footer class="page">github pages 정적 호스팅용 — verify-board</footer>
+</div>
+
+<script>
+(function () {
+  var articles = [
+  {
+    "번호": "1",
+    "부처": "행정안전부",
+    "제목": "5월 25일 전국 호우 대응 — 중대본 1단계 가동",
+    "본문": "# 5월 25일 전국 호우 대응 — 중대본 1단계 가동\n\n행정안전부(장관 윤호중)는 5월 25일 16:30 부로 중앙재난안전대책본부 1단계를 가동하고 전국 17개 광역지방정부를 대상으로 호우 대비 비상대응 체계를 확립했다.\n\n이번 대응에는 전국적으로 **1,820명**의 공무원·소방·경찰 인력이 동원됐다. 총 투입 예산은 **23억원**으로, 자연재난 대응을 위한 예비비에서 즉시 집행된다.\n\n중앙재난안전대책본부장은 16:30 가동 명령과 함께 17개 광역지방정부에 일제히 현장 점검 지시를 내렸다. 현재까지 잠정 집계된 인명피해는 **2명**으로, 경상자 위주로 경미한 수준이다.\n\n담당 부서: 자연재난대응과 (044-205-5230)"
+  },
+  {
+    "번호": "2",
+    "부처": "기상청",
+    "제목": "5월 25일 전국 호우특보 발효 및 대응 동향",
+    "본문": "# 5월 25일 전국 호우특보 발효 및 대응 동향\n\n기상청은 5월 25일 11:00부터 전국 17개 광역에 호우주의보를 단계적으로 발효했으며, 행정안전부와 협업해 **16:40** 부로 중앙재난안전대책본부 1단계 가동을 지원했다.\n\n기상청 IT인프라과는 재난문자 발송 자동화 시스템을 통해 행안부와 연계 대응을 진행했다. 본 대응에 동원된 인력은 행정안전부 집계 기준 **1,820명**이며, 행안부·기상청 합동 예산은 **25억원**이 집행됐다.\n\n전국 17개 광역지방정부에 호우주의보가 발효된 가운데, 잠정 인명피해는 **3명**이다.\n\n담당 부서: 기상청 IT인프라과 (02-2181-0700)"
+  },
+  {
+    "번호": "3",
+    "부처": "경찰청",
+    "제목": "5월 25일 호우 대응 — 교통통제 현황",
+    "본문": "# 5월 25일 호우 대응 — 교통통제 현황\n\n경찰청은 5월 25일 **16:30** 부로 가동된 행정안전부 중대본 1단계에 따라 전국 주요 도로 통제 체계를 가동했다. 통제 범위는 **16개** 광역을 대상으로 했다.\n\n전국 동원 경찰 인력은 **1,800명**이며, 경찰청 자체 예산 **23억원**을 비상 운영비에 즉시 투입했다.\n\n집계된 인명피해는 **3명**으로, 경찰청 119 합동 대응체계가 신속하게 가동된 결과다.\n\n담당 부서: 경찰청 교통안전관리과 (02-3150-2300)"
+  }
+];
+
+  var facts = [
+    { key: "동원인원", label: "동원 인원", values: { "행정안전부": "1,820명", "기상청": "1,820명", "경찰청": "1,800명" } },
+    { key: "투입예산", label: "투입 예산", values: { "행정안전부": "23억원", "기상청": "25억원", "경찰청": "23억원" } },
+    { key: "발령시각", label: "중대본 1단계 발령시각", values: { "행정안전부": "16:30", "기상청": "16:40", "경찰청": "16:30" } },
+    { key: "관할지역수", label: "관할 지역 수", values: { "행정안전부": "17개", "기상청": "17개", "경찰청": "16개" } },
+    { key: "인명피해", label: "인명 피해", values: { "행정안전부": "2명", "기상청": "3명", "경찰청": "3명" } }
+  ];
+  var depts = ["행정안전부", "기상청", "경찰청"];
+
+  var cardList = document.getElementById("card-list");
+  var resultCount = document.getElementById("result-count");
+  var searchInput = document.getElementById("search-input");
+  var deptChips = document.getElementById("dept-chips");
+  var activeDept = null;
+
+  depts.forEach(function (d) {
+    var chip = document.createElement("button");
+    chip.className = "chip";
+    chip.type = "button";
+    chip.textContent = d;
+    chip.setAttribute("aria-pressed", "false");
+    chip.addEventListener("click", function () {
+      activeDept = activeDept === d ? null : d;
+      Array.prototype.forEach.call(deptChips.children, function (c) {
+        c.setAttribute("aria-pressed", c === chip && activeDept ? "true" : "false");
+      });
+      render();
+    });
+    deptChips.appendChild(chip);
+  });
+
+  function escapeHtml(s) {
+    return s.replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
+  function highlight(text, q) {
+    if (!q) return escapeHtml(text);
+    var esc = escapeHtml(text);
+    var escQ = escapeHtml(q).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    return esc.replace(new RegExp(escQ, "gi"), function (m) { return "<mark>" + m + "</mark>"; });
+  }
+
+  function summarize(body) {
+    var plain = body.replace(/^#.*$/m, "").replace(/\*\*/g, "").replace(/\n+/g, " ").trim();
+    return plain.length > 140 ? plain.slice(0, 140) + "…" : plain;
+  }
+
+  function render() {
+    var q = searchInput.value.trim();
+    var matched = articles.filter(function (a) {
+      var deptOk = !activeDept || a.부처 === activeDept;
+      var textOk = !q || a.부처.indexOf(q) > -1 || a.본문.indexOf(q) > -1 || a.제목.indexOf(q) > -1;
+      return deptOk && textOk;
+    });
+
+    resultCount.innerHTML = "결과 <b>" + matched.length + "</b>건";
+    cardList.innerHTML = "";
+
+    if (matched.length === 0) {
+      var empty = document.createElement("p");
+      empty.className = "empty";
+      empty.textContent = "일치하는 보도자료가 없습니다.";
+      cardList.appendChild(empty);
+      return;
+    }
+
+    matched.forEach(function (a) {
+      var card = document.createElement("article");
+      card.className = "card";
+      card.innerHTML =
+        '<div class="card-top"><span class="dept">' + escapeHtml(a.부처) + "</span></div>" +
+        '<h3 class="card-title">' + highlight(a.제목, q) + "</h3>" +
+        '<p class="card-summary">' + highlight(summarize(a.본문), q) + "</p>";
+      cardList.appendChild(card);
+    });
+  }
+
+  searchInput.addEventListener("input", render);
+  render();
+
+  var table = document.getElementById("matrix-table");
+  var thead = "<thead><tr><th>구분</th>" + depts.map(function (d) { return "<th>" + d + "</th>"; }).join("") + "</tr></thead>";
+  var rows = facts.map(function (f) {
+    var vals = depts.map(function (d) { return f.values[d]; });
+    var mismatch = vals.some(function (v) { return v !== vals[0]; });
+    var cells = depts.map(function (d) {
+      return '<td class="val">' + (mismatch ? '<span class="flag"></span>' : "") + escapeHtml(f.values[d]) + "</td>";
+    }).join("");
+    return "<tr><td class=\"fact\">" + escapeHtml(f.label) + "</td>" + cells + "</tr>";
+  }).join("");
+  table.innerHTML = thead + "<tbody>" + rows + "</tbody>";
+
+  var tsvLines = ["구분\t" + depts.join("\t")];
+  facts.forEach(function (f) {
+    tsvLines.push(f.label + "\t" + depts.map(function (d) { return f.values[d]; }).join("\t"));
+  });
+  var tsv = tsvLines.join("\n");
+
+  var copyBtn = document.getElementById("copy-tsv");
+  var copyMsg = document.getElementById("copy-msg");
+  copyBtn.addEventListener("click", function () {
+    function shown() {
+      copyMsg.hidden = false;
+      setTimeout(function () { copyMsg.hidden = true; }, 1800);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(tsv).then(shown).catch(function () { fallbackCopy(tsv, shown); });
+    } else {
+      fallbackCopy(tsv, shown);
+    }
+  });
+
+  function fallbackCopy(text, cb) {
+    var ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    try { document.execCommand("copy"); } catch (e) {}
+    document.body.removeChild(ta);
+    cb();
+  }
+})();
+</script>
+</body>
+</html>
